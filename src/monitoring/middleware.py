@@ -48,3 +48,29 @@ def os_stats(func):
         return result
 
     return decorated_function
+
+
+if __name__ == "__main__":
+    import time
+    import tempfile
+
+    @os_stats
+    def test_task(self, idx, file_path, enq_time):
+        time.sleep(0.1)
+        return idx * 2
+
+    class FakeTask:
+        name = "test_task"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        enq_time = time.time()
+        task = FakeTask()
+        result = test_task(task, 1, tmpdir, enq_time)
+        print(f"Результат: {result}")
+        # Проверим, что лог создан
+        import os
+        pid = os.getpid()
+        log_path = os.path.join(tmpdir, f"completed_tasks_{pid}.log")
+        if os.path.exists(log_path):
+            with open(log_path) as f:
+                print("Содержимое лога:", f.read().strip())

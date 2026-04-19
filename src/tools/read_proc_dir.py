@@ -82,3 +82,12 @@ def get_process_info(pid: int) -> dict:
         'nonvoluntary_ctxt_switches': int(nonvoluntary_sw) if nonvoluntary_sw else 0,
         'jiffies': jiffies,
     }
+
+
+if __name__ == "__main__":
+    import os
+    pid = os.getpid()
+    print(f"Информация о текущем процессе (PID {pid}):")
+    info = get_process_info(pid)
+    for k, v in info.items():
+        print(f"  {k}: {v}")

@@ -19,13 +19,17 @@ class ProcessMonitor:
         self.celery_processes = defaultdict(dict)
         self.file_path = file_path
 
-    def update_stats(self):
+    def update_stats(self, is_demo=False):
+        """
+        :param is_demo: для запуска через main()
+        """
         for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'memory_info', 'cpu_percent', 'create_time']):
             try:
                 cmdline = proc.info['cmdline'] or []
                 cmd_str = ' '.join(cmdline)
 
-                if 'celery' in cmd_str and 'worker' in cmd_str:
+                if ('celery' in cmd_str and 'worker' in cmd_str
+                        or (is_demo and 'celery_app' in cmd_str)):
                     pid = proc.info['pid']
                     proc_info = get_process_info(pid)
                     cur_time = time.time()
@@ -163,3 +167,22 @@ class ProcessMonitor:
         await self._write_to_file(lines, "summary.log")
 
         return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    import asyncio
+    import tempfile
+
+    async def demo():
+        with tempfile.TemporaryDirectory() as tmpdir:
+            monitor = ProcessMonitor(tmpdir)
+            print("Сбор информации о процессах Celery...")
+            monitor.update_stats(is_demo=True)
+            if monitor.celery_processes:
+                print(f"Найдено процессов: {len(monitor.celery_processes)}")
+                summary = await monitor.format_stats()
+                print(summary)
+            else:
+                print("Процессы Celery не обнаружены. Убедитесь, что воркер запущен.")
+
+    asyncio.run(demo())

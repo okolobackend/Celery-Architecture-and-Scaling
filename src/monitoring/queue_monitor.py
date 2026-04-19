@@ -101,3 +101,16 @@ class QueueMonitor:
         }
         async with aiofiles.open(filepath, "w", encoding='utf-8') as f:
             await f.write(json.dumps(data, indent=4, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    async def queue_demo():
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmpdir:
+            qm = QueueMonitor(output_dir=tmpdir)
+            print("Опрос очереди Celery...")
+            await qm.update_stats()
+            history = qm.history[0]
+            print(f"Сейчас {history['messages']} сообщений в очереди")
+
+    asyncio.run(queue_demo())
