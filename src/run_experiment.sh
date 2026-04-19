@@ -91,6 +91,13 @@ fi
 # Это точно-точно десятичное число для максимума рабочих процессов
 MAX_PROC_NUM=$((10#$MAX_PROC))
 
+# вычисляем нижний порог для автоскейла
+if [[ "$WORKER_TYPE" == "a" ]]; then
+    MIN_PROC=$((MAX_PROC_NUM / 2))
+    PREFORK_ARG="--autoscale=$MAX_PROC_NUM,$MIN_PROC"
+else
+    PREFORK_ARG="--concurrency=$MAX_PROC_NUM"
+fi
 # -------------------- Создание cgroup --------------------
 echo -e "${GREEN}Создаём cgroup '$CGROUP_NAME' с ограничением в 2 ядра...${NC}"
 sudo mkdir -p "/sys/fs/cgroup/$CGROUP_NAME"
@@ -104,7 +111,7 @@ fi
 # -------------------- Запуск Celery worker --------------------
 echo -e "${GREEN}Запускаем Celery worker (логи в $WORKER_LOG)${NC}"
 $CELERY_EXE -A "$CELERY_APP" worker --loglevel=INFO \
-    $([[ "$WORKER_TYPE" == "a" ]] && echo "--autoscale=$MAX_PROC_NUM,0" || echo "--concurrency=$MAX_PROC_NUM") \
+    "$PREFORK_ARG" \
     > "$WORKER_LOG" 2>&1 &
 WORKER_PID=$!
 echo "$WORKER_PID" | sudo tee "/sys/fs/cgroup/$CGROUP_NAME/cgroup.procs" >/dev/null
