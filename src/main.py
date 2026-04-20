@@ -91,7 +91,7 @@ async def main_script(file_path: str, max_proc: str, queue_type: str) -> None:
     #  А на выходе чем медленнее поступают задачи, тем меньше пропускная способность. Ло! Логика.
     # Главное, чтобы очередь не переполнялась больше, чем рабочих процессов, и не пустовала
     if max_proc == '08' and queue_type == 'm':
-        multipliers = [1.2, 1.25, 1.3, 1.4, 1.5]
+        multipliers = [1.25, 1.3, 1.4]
         multiplier = random.choice(multipliers)
         print(f"Random choice multiplier {multiplier}")
         time_sleep *= multiplier

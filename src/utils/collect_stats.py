@@ -244,7 +244,7 @@ def main():
     parser = argparse.ArgumentParser(description='Сбор статистики тестов Celery')
     parser.add_argument('--root', default=__get_default_root(),
                         help='Корневая директория с папками *._processes (по умолчанию текущая)')
-    parser.add_argument('--output', default='summary_report.txt',
+    parser.add_argument('--output', default=f'{__get_default_root()}/summary_report.txt',
                         help='Файл для сохранения отчёта (по умолчанию summary_report.txt)')
     args = parser.parse_args()
 
@@ -288,17 +288,19 @@ def main():
                 report_lines.append(header)
                 report_lines.append("-" * len(header))
                 report_lines.append(f"Количество прогонов: {avg['runs_count']}")
-                report_lines.append(f"Среднее кол-во процессов: {avg['worker_count']}")
-                report_lines.append(f"Пропускная способность (средний throughput_tps): {avg['throughput']:.4f}")
-                report_lines.append(f"Среднее кол-во задач (tasks_completed): {avg['tasks_completed']:.2f}")
-                report_lines.append(f"Средняя длительность (duration_sec): {avg['duration']:.2f}")
+                report_lines.append(f"Средняя длительность прогона: {avg['duration']:.2f}")
+                report_lines.append(f"Среднее кол-во задач в прогоне: {avg['tasks_completed']:.2f}")
+                report_lines.append("-" * len(header))
+                report_lines.append(f"Среднее кол-во процессов: {avg['worker_count']:.2f}")
+                report_lines.append(f"Среднее число выполненных задач на процесс: {avg['avg_tasks_per_worker']:.2f}")
+                report_lines.append(f"Пропускная способность (средний throughput_tps): {avg['throughput']:.2f}")
                 report_lines.append(f"Средний latency: {avg['avg_latency']:.4f}")
                 report_lines.append(f"Средний runtime: {avg['avg_runtime']:.4f}")
-                report_lines.append(f"Среднее число выполненных задач на процесс: {avg['avg_tasks_per_worker']:.2f}")
-                report_lines.append(f"Среднее voluntary_ctxt_switches: {avg['avg_voluntary']:.2f}")
-                report_lines.append(f"Среднее nonvoluntary_ctxt_switches: {avg['avg_nonvoluntary']:.2f}")
+                report_lines.append("-" * len(header))
                 report_lines.append(f"Среднее использование ЦПУ: {avg['avg_cpu_load']:.2f}")
                 report_lines.append(f"Среднее использование РАМ: {avg['avg_memory_mb']:.2f}")
+                report_lines.append(f"Среднее voluntary_ctxt_switches: {avg['avg_voluntary']:.2f}")
+                report_lines.append(f"Среднее nonvoluntary_ctxt_switches: {avg['avg_nonvoluntary']:.2f}")
 
     # Вывод отчёта
     report_text = "\n".join(report_lines)
