@@ -31,7 +31,7 @@ class QueueMonitor:
             async with aiohttp.ClientSession() as session:
                 async with session.delete(purge_url, auth=self.auth) as response:
                     if response.status == 204:
-                        print(f"Очередь очищена.")
+                        print(f"Очередь очищена {datetime.now()}")
                     else:
                         error_text = await response.text()
                         print(f"Ошибка при очистке очереди: Статус {response.status}, Ответ: {error_text}")

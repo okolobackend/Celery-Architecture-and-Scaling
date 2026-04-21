@@ -29,7 +29,6 @@ async def start_monitor_queue(throughput_monitor) -> None:
             await asyncio.sleep(5.0)
     except asyncio.CancelledError:
         await throughput_monitor.purge_queue()
-        await asyncio.sleep(2)
         await throughput_monitor.update_stats()
         await throughput_monitor.write_to_file()
         raise
@@ -97,7 +96,7 @@ async def main_script(file_path: str, max_proc: str, queue_type: str) -> None:
             await asyncio.sleep(time_sleep)
 
     print(f'End at {datetime.now()}, sent {idx_task} tasks')
-
+    await asyncio.sleep(time_sleep)
 
 async def main() -> None:
     args = parse_args()
