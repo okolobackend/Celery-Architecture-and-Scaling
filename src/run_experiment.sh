@@ -2,7 +2,7 @@
 set -euo pipefail
 #set -x
 
-# -------------------- Определяем путь к venv --------------------
+# -------------------- Путь к venv --------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 VENV_PATH="${PROJECT_ROOT}/.venv"
@@ -29,34 +29,67 @@ CELERY_APP="celery_app"
 PYTHON_SCRIPT="${SCRIPT_DIR}/main.py"
 LOG_DIR_BASE="../docs/02_runtime"
 WORKER_LOG="${SCRIPT_DIR}/worker.log"
+SLEEP_BETWEEN=2
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-function error_exit {
+WORKER_PID=""
+
+# -------------------- Функции --------------------
+error_exit() {
     echo -e "${RED}Ошибка: $1${NC}" >&2
-    cleanup
     exit 1
 }
 
-function cleanup {
-    echo -e "${YELLOW}Завершаем worker и удаляем cgroup...${NC}"
-    if [[ -n "${WORKER_PID:-}" ]] && kill -0 "$WORKER_PID" 2>/dev/null; then
-        kill -TERM "$WORKER_PID" 2>/dev/null || true
-        wait "$WORKER_PID" 2>/dev/null || true
+stop_worker() {
+    if [[ -n "$WORKER_PID" ]]; then
+        if kill -0 "$WORKER_PID" 2>/dev/null; then
+            echo -e "${YELLOW}Останавливаем worker (PID $WORKER_PID)...${NC}"
+            kill -TERM "$WORKER_PID" 2>/dev/null || true
+            for _ in {1..10}; do
+                kill -0 "$WORKER_PID" 2>/dev/null || break
+                sleep 1
+            done
+            if kill -0 "$WORKER_PID" 2>/dev/null; then
+                echo -e "${RED}Worker не завершился, принудительно убиваем${NC}"
+                kill -9 "$WORKER_PID" 2>/dev/null || true
+            fi
+            wait "$WORKER_PID" 2>/dev/null || true
+        fi
+        WORKER_PID=""
     fi
+}
+
+cleanup() {
+    echo -e "${YELLOW}Очистка...${NC}"
+    stop_worker
     if [[ -d "/sys/fs/cgroup/$CGROUP_NAME" ]]; then
         sudo rmdir "/sys/fs/cgroup/$CGROUP_NAME" 2>/dev/null || true
     fi
 }
 
-trap cleanup EXIT
+start_worker() {
+    echo -e "${GREEN}Запускаем Celery worker (лог: $WORKER_LOG)${NC}"
+    $CELERY_EXE -A "$CELERY_APP" worker --loglevel=INFO \
+        "$PREFORK_ARG" > "$WORKER_LOG" 2>&1 &
+    WORKER_PID=$!
+    echo "$WORKER_PID" | sudo tee "/sys/fs/cgroup/$CGROUP_NAME/cgroup.procs" >/dev/null
 
-# Проверка cgroups v2
+    sleep 2
+    if ! kill -0 "$WORKER_PID" 2>/dev/null; then
+        echo -e "${RED}Worker упал при старте. Последние строки лога:${NC}"
+        tail -20 "$WORKER_LOG"
+        error_exit "Worker не запустился."
+    fi
+    echo -e "${GREEN}Worker запущен, PID: $WORKER_PID${NC}"
+}
+
+# -------------------- Проверка cgroups v2 --------------------
 if ! mount | grep -q "cgroup2 on /sys/fs/cgroup"; then
-    error_exit "cgroups v2 не смонтированы. Настройте систему."
+    error_exit "cgroups v2 не смонтированы."
 fi
 
 # -------------------- Разбор аргументов --------------------
@@ -88,10 +121,7 @@ if [[ ! "$MAX_PROC" =~ ^(2|4|8)$ ]]; then
     error_exit "Неверное число процессов. Допустимо: 2, 4, 8"
 fi
 
-# Это точно-точно десятичное число для максимума рабочих процессов
 MAX_PROC_NUM=$((10#$MAX_PROC))
-
-# вычисляем нижний порог для автоскейла
 if [[ "$WORKER_TYPE" == "a" ]]; then
     MIN_PROC=$((MAX_PROC_NUM / 2))
     PREFORK_ARG="--autoscale=$MAX_PROC_NUM,$MIN_PROC"
@@ -108,45 +138,24 @@ if [[ "$USE_CPUSET" == "yes" ]]; then
     echo "0-1" | sudo tee "/sys/fs/cgroup/$CGROUP_NAME/cpuset.cpus" >/dev/null
     echo "0"   | sudo tee "/sys/fs/cgroup/$CGROUP_NAME/cpuset.mems" >/dev/null
 fi
-# -------------------- Запуск Celery worker --------------------
-echo -e "${GREEN}Запускаем Celery worker (логи в $WORKER_LOG)${NC}"
-$CELERY_EXE -A "$CELERY_APP" worker --loglevel=INFO \
-    "$PREFORK_ARG" \
-    > "$WORKER_LOG" 2>&1 &
-WORKER_PID=$!
-echo "$WORKER_PID" | sudo tee "/sys/fs/cgroup/$CGROUP_NAME/cgroup.procs" >/dev/null
 
-# Ждём и проверяем, жив ли worker
-sleep 2
-if ! kill -0 "$WORKER_PID" 2>/dev/null; then
-    echo -e "${RED}Worker упал при старте. Последние строки лога:${NC}"
-    tail -20 "$WORKER_LOG"
-    error_exit "Worker не запустился."
-fi
-
-# -------------------- Проверка CPU --------------------
-echo -e "${GREEN}Проверяем настройки CPU для cgroup:${NC}"
-echo "Процесс воркера: $WORKER_PID"
-echo -n "  - Разрешённые ядра (taskset): "
-taskset -cp "$WORKER_PID" 2>/dev/null | cut -d ' ' -f 6- || echo "Не удалось определить"
-echo -n "  - Доступные ядра (cpuset.cpus.effective): "
-sudo cat "/sys/fs/cgroup/$CGROUP_NAME/cpuset.cpus.effective" 2>/dev/null || echo "Ограничений нет"
-echo -n "  - CPU квота (cpu.max): "
-sudo cat "/sys/fs/cgroup/$CGROUP_NAME/cpu.max"
+trap cleanup EXIT INT TERM
 
 # -------------------- Цикл экспериментов --------------------
-echo -e "${GREEN}Начинаем серию из 15 экспериментов...${NC}"
+echo -e "${GREEN}Начинаем серию из 15 экспериментов. На каждой итерации worker перезапускается.${NC}"
+
 for order in {1..15}; do
     echo -e "${YELLOW}--- Запуск $order из 15 ---${NC}"
 
+    start_worker
+
     $PYTHON_EXE "$PYTHON_SCRIPT" "$WORKER_TYPE" "$MAX_PROC" "$QUEUE_TYPE" "$order"
 
-    if [[ $? -ne 0 ]]; then
-        echo -e "${RED}Python скрипт завершился с ошибкой. Прерываем серию.${NC}"
-        break
-    fi
+    sleep "$SLEEP_BETWEEN"
 
-    sleep 2
+    stop_worker
+
 done
 
-echo -e "${GREEN}Эксперимент завершён. Результаты в $LOG_DIR_BASE/${NC}"
+echo -e "${GREEN}Все 15 экспериментов завершены. Результаты в $LOG_DIR_BASE/${NC}"
+cleanup

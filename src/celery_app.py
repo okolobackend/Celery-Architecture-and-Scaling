@@ -1,6 +1,4 @@
-import time
-
-from celery import Celery, signals
+from celery import Celery
 
 
 def make_celery():
@@ -48,7 +46,7 @@ if __name__ == "__main__":
     import sys
     print("Запуск Celery worker с параметрами по умолчанию (concurrency=2)")
     print("Для настройки используйте аргументы командной строки, например:")
-    print("  celery -A celery_app worker --autoscale=4,0 --loglevel=info")
+    print("-A celery_app worker --autoscale=4,0 --loglevel=info")
     # Можно передать аргументы напрямую, но проще показать пример
     sys.argv = ["-A", "celery_app", "worker", "--loglevel=info", "--concurrency=2"]
     celery.worker_main()
