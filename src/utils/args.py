@@ -9,7 +9,7 @@ type_worker = {
 
 type_queue = {
     'v': 'cumulative',
-    'm': 'monotonic'
+    's': 'schedule'
 
 }
 
@@ -29,6 +29,11 @@ order_name = {
     13: '13_thirteenth',
     14: '14_fourteenth',
     15: '15_fifteenth',
+    16: '16_sixteenth',
+    17: '17_seventeenth',
+    18: '18_eighteenth',
+    19: '19_nineteenth',
+    20: '20_twentieth',
 }
 
 
@@ -45,10 +50,10 @@ def parse_args():
                         help="Тип воркера: 'a' - autoscale, 'c' - concurrency")
     parser.add_argument('max_proc', type=int, choices=[2, 4, 8],
                         help="Максимум процессов: 2, 4 или 8")
-    parser.add_argument('queue_type', choices=['v', 'm'],
-                        help="Тип очереди: 'v' - cumulative, 'm' - monotone")
-    parser.add_argument('order', type=int, choices=range(1, 16),
-                        help="Номер запуска от 1 до 15")
+    parser.add_argument('queue_type', choices=['v', 's'],
+                        help="Тип очереди: 'v' - cumulative, 's' - schedule")
+    parser.add_argument('order', type=int, choices=range(1, 21),
+                        help="Номер запуска от 1 до 20")
 
     return parser.parse_args()
 

@@ -65,8 +65,8 @@ async def main_script(file_path: str, max_proc: str, queue_type: str) -> None:
     кол-во задач и место паузы генерации этих задач.
 
     Есть два типа очередей для тестов:
-    - монотонная, где задачи не копятся в статусе Ready в брокере, так как частота публикации подогнана к латенси;
-    - накопительная, где задачи могут ожидать освобождения процесса.
+    - по расписанию, имитация Celery Beat;
+    - накопительная, время поступления новой пачки чуть меньше среднего runtime.
     Темп для формирования очереди задается временем паузы.
     Конечно можно обойтись без паузы и просто навалить задач в очередь
     и ждать пока воркер все их разгребет. +/- это будет то же кол-во задач.
@@ -80,9 +80,7 @@ async def main_script(file_path: str, max_proc: str, queue_type: str) -> None:
     await asyncio.sleep(0.5)
 
     print(f'Start at {datetime.now()}')
-    time_sleep = 1.7 if 'monotonic' in file_path else 1.6
-    if max_proc == '08' and queue_type == 'm':
-        time_sleep *= 1.4
+    time_sleep = 10 if 'schedule' in file_path else 1.6
 
     max_duration = 300
     start_time = time.time()

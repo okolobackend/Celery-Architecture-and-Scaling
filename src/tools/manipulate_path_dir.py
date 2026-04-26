@@ -4,13 +4,13 @@ from pathlib import Path
 def create_path(max_proc_str: str, worker_dir: str, queue_dir: str, order_dir: str) -> str:
     """
     Безопасное создание директории для хранения логов в один запуск.
-    Если прежде подобный прогон был, то архивируем по типу очереди(monotonic/volatile),
+    Если прежде подобный прогон был, то архивируем по типу очереди(schedule/cumulative),
     добавляя суффикс _old к существующей директории
     """
     cur_dir = Path.cwd()
     parent_dir = cur_dir.parent
 
-    base_path = parent_dir / 'docs' / '02_runtime' / f"{max_proc_str}_processes" / worker_dir / queue_dir
+    base_path = parent_dir / 'docs' / '02_runtime' / queue_dir/ f"{max_proc_str}_processes" / worker_dir
     target_dir = base_path / order_dir
 
     # Если целевая папка существует, то перемещаем всю очередь, добавляя _old, _old_old и т.д.

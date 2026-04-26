@@ -1,237 +1,228 @@
-#!/usr/bin/env python3
 """
-Скрипт для сбора итоговой статистики тестов Celery.
-Ожидается структура:
-
-docs/
-    02_processes/
-        autoscale/
-            cumulative/
-                01_first/
-                    queue_throughput.log
-                    summary.log
-                02_second/
-                ...
-            monotonic/
-                ...
-        concurrency/
-            cumulative/
-            monotonic/
-    04_processes/
-    ...
-
-Использование:
-    python collect_stats.py [--root PATH] [--output FILE]
-
-По умолчанию root = ../../docs/02_runtime, output = summary_report.txt
+Финальный сбор статистики тестов Celery из сырых логов задач.
+Для каждой конфигурации (число процессов, тип пула, тип очереди) собирает:
+- количество прогонов,
+- среднее количество процессов (по числу уникальных лог-файлов),
+- среднюю длительность, задачи, throughput,
+- по логам задач: для каждого прогона средняя латентность, затем по прогонам:
+    среднее, стандартное отклонение, CV, 95% ДИ,
+- также общие перцентили (90,95) по всем задачам всех прогонов.
+Вывод в формате Markdown.
+Предупреждение: ⚠️ — коэффициент вариации (CV) > 30%.
 """
 
 import argparse
 import json
+import math
 import os
-import re
+import statistics
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
-# === Вспомогательные функции ===
 
-def parse_queue_throughput(file_path: Path) -> Tuple[float, int, float]:
+def t_critical(n: int, conf: float = 0.95) -> float:
     """
-    Извлекает из queue_throughput.log суммарные значения throughput_tps,
-    tasks_completed и duration_sec по всем активным периодам.
-    Возвращает (throughput, tasks, duration).
+    Табличные значения t-распределения для двустороннего 95% ДИ.
+    Если n <= 1, возвращает float('nan').
     """
+    if n <= 1:
+        return float('nan')
+    table = {
+        2: 4.303, 3: 3.182, 4: 2.776, 5: 2.571, 6: 2.447,
+        7: 2.365, 8: 2.306, 9: 2.262, 10: 2.228, 11: 2.201,
+        12: 2.179, 13: 2.160, 14: 2.145, 15: 2.131, 16: 2.120,
+        17: 2.110, 18: 2.101, 19: 2.093, 20: 2.086, 21: 2.080,
+        22: 2.074, 23: 2.069, 24: 2.064, 25: 2.060, 26: 2.056,
+        27: 2.052, 28: 2.048, 29: 2.045, 30: 2.042, 31: 2.040,
+        32: 2.037, 33: 2.035, 34: 2.032, 35: 2.030, 36: 2.028,
+        37: 2.026, 38: 2.024, 39: 2.023, 40: 2.021, 41: 2.020,
+        42: 2.018, 43: 2.017, 44: 2.015, 45: 2.014, 46: 2.013,
+        47: 2.012, 48: 2.011, 49: 2.010, 50: 2.009, 51: 2.008,
+        52: 2.007, 53: 2.006, 54: 2.005, 55: 2.004, 56: 2.003,
+        57: 2.002, 58: 2.002, 59: 2.001, 60: 2.000, 61: 2.000,
+        70: 1.994, 80: 1.990, 90: 1.987, 100: 1.984,
+    }
+    if n in table:
+        return table[n]
+    if n > 100:
+        return 1.96
+    # интерполяция для промежуточных n (например, 33, 34...)
+    keys = sorted([k for k in table.keys() if k <= n])
+    if not keys:
+        return 1.96
+    lower = max(keys)
+    higher = min([k for k in table.keys() if k >= n], default=lower)
+    if lower == higher:
+        return table[lower]
+    ratio = (n - lower) / (higher - lower)
+    return table[lower] + ratio * (table[higher] - table[lower])
+
+
+def read_queue_throughput(file_path: Path) -> Tuple[float, int, float]:
+    """Возвращает (throughput_tps, tasks_completed, duration_sec) из queue_throughput.log"""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-    except (json.JSONDecodeError, OSError) as e:
-        print(f"  Предупреждение: не удалось прочитать {file_path}: {e}")
+    except (json.JSONDecodeError, OSError):
         return 0.0, 0, 0.0
-
     periods = data.get('active_periods', [])
-    if not periods:
-        return 0.0, 0, 0.0
-
-    total_throughput = 0.0
     total_tasks = 0
     total_duration = 0.0
-    for period in periods:
-        total_throughput += period.get('throughput_tps', 0.0)
-        total_tasks += period.get('tasks_completed', 0)
-        total_duration += period.get('duration_sec', 0.0)
-    return total_throughput, total_tasks, total_duration
+    for p in periods:
+        total_tasks += p.get('tasks_completed', 0)
+        total_duration += p.get('duration_sec', 0.0)
+    throughput = total_tasks / total_duration if total_duration > 0 else 0.0
+    return throughput, total_tasks, total_duration
 
 
-def parse_summary(file_path: Path) -> Optional[Dict[str, float]]:
+def read_completed_tasks(run_dir: Path) -> Tuple[List[float], List[float], int]:
     """
-    Парсит summary.log, извлекает данные только для рабочих процессов.
-    Возвращает словарь:
-        {
-            'avg_latency': float,      # среднее latency по всем рабочим процессам
-            'avg_tasks_per_worker': float,  # среднее число задач на процесс
-            'avg_voluntary': float,    # среднее voluntary контекстных переключений
-            'avg_nonvoluntary': float, # среднее nonvoluntary
-            'worker_count': int        # количество рабочих процессов
-        }
-    Если рабочих процессов нет, возвращает None.
+    Читает все completed_tasks_*.log в run_dir.
+    Возвращает (список латентностей всех задач, список runtime всех задач, количество уникальных процессов).
+    Количество процессов = число файлов с префиксом completed_tasks_.
     """
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-    except OSError as e:
-        print(f"  Предупреждение: не удалось прочитать {file_path}: {e}")
-        return None
+    latencies = []
+    runtimes = []
+    process_files = list(run_dir.glob('completed_tasks_*.log'))
+    num_processes = len(process_files)
 
-    # Регулярное выражение для поиска ключ: значение
-    key_value_re = re.compile(r'^([A-Za-zА-Яа-я\s_]+):\s*([\d\.]+)')
-    # Признак управляющего процесса
-    is_controller = False
-    current_data = {}
-    workers_data = []  # список словарей с данными каждого рабочего процесса
-
-    for line in lines:
-        line = line.strip()
-        if not line:
+    for log_file in process_files:
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                        lat = data.get('duration_including_enqueue')
+                        rt = data.get('duration_into_wraps')
+                        if lat is not None:
+                            latencies.append(float(lat))
+                        if rt is not None:
+                            runtimes.append(float(rt))
+                    except json.JSONDecodeError:
+                        continue
+        except OSError:
             continue
+    return latencies, runtimes, num_processes
 
-        # Начало нового процесса
-        if line.startswith('Процесс:'):
-            # Сохраняем предыдущий процесс, если он был рабочим
-            if current_data and not is_controller:
-                # Извлекаем нужные поля
-                latency = current_data.get('Среднее latency')
-                runtime = current_data.get('Средний runtime')
-                tasks = current_data.get('Всего задач')
-                voluntary = current_data.get('voluntary_ctxt_switches')
-                nonvoluntary = current_data.get('nonvoluntary_ctxt_switches')
-                avg_cpu_load = current_data.get('avg_cpu_load')
-                avg_memory_mb = current_data.get('avg_memory_mb')
-                if None not in (latency, tasks, voluntary, nonvoluntary):
-                    workers_data.append({
-                        'latency': float(latency),
-                        'runtime': float(runtime),
-                        'tasks': int(tasks),
-                        'voluntary': int(voluntary),
-                        'nonvoluntary': int(nonvoluntary),
-                        'avg_cpu_load': float(avg_cpu_load),
-                        'avg_memory_mb': float(avg_memory_mb),
-                    })
-            # Сбрасываем для нового процесса
-            current_data = {}
-            is_controller = False
-            continue
 
-        # Проверка на управляющий процесс
-        if 'УПРАВЛЯЮЩИЙ ПРОЦЕСС' in line:
-            is_controller = True
+def percentiles(values: List[float], percents: List[int]) -> Dict[int, float]:
+    """Вычисляет перцентили без numpy."""
+    if not values:
+        return {p: 0.0 for p in percents}
+    sorted_vals = sorted(values)
+    n = len(sorted_vals)
+    result = {}
+    for p in percents:
+        idx = (p / 100.0) * (n - 1)
+        lower = int(idx)
+        upper = lower + 1
+        if upper >= n:
+            result[p] = sorted_vals[-1]
+        else:
+            weight = idx - lower
+            result[p] = (1 - weight) * sorted_vals[lower] + weight * sorted_vals[upper]
+    return result
 
-        if is_controller:
-            continue
 
-        # Извлечение пар ключ: значение
-        match = key_value_re.match(line)
-        if match:
-            key = match.group(1).strip()
-            value = match.group(2).strip()
-            current_data[key] = value
+def analyze_run(run_dir: Path) -> Tuple[Optional[Dict], List[float]]:
+    """
+    Анализирует один прогон: собирает данные из queue_throughput и логов задач.
+    Возвращает (словарь с метриками, список латентностей всех задач этого прогона).
+    """
+    queue_file = run_dir / 'queue_throughput.log'
+    if not queue_file.exists():
+        return None, []
+    throughput, tasks, duration = read_queue_throughput(queue_file)
+    if tasks == 0:
+        return None, []
+    latencies, runtimes, num_processes = read_completed_tasks(run_dir)
+    if not latencies or not runtimes:
+        return None, []
 
-    # Обработка последнего процесса
-    if current_data and not is_controller:
-        latency = current_data.get('Среднее latency')
-        runtime = current_data.get('Средний runtime')
-        tasks = current_data.get('Всего задач')
-        voluntary = current_data.get('voluntary_ctxt_switches')
-        nonvoluntary = current_data.get('nonvoluntary_ctxt_switches')
-        avg_cpu_load = current_data.get('avg_cpu_load')
-        avg_memory_mb = current_data.get('avg_memory_mb')
-        if None not in (latency, tasks, voluntary, nonvoluntary):
-            workers_data.append({
-                'latency': float(latency),
-                'runtime': float(runtime),
-                'tasks': int(tasks),
-                'voluntary': int(voluntary),
-                'nonvoluntary': int(nonvoluntary),
-                'avg_cpu_load': float(avg_cpu_load),
-                'avg_memory_mb': float(avg_memory_mb),
-            })
+    mean_lat = statistics.mean(latencies)
+    median_lat = statistics.median(latencies)
+    perc_lat = percentiles(latencies, [90, 95])
+    mean_rt = statistics.mean(runtimes)
+    median_rt = statistics.median(runtimes)
+    perc_rt = percentiles(runtimes, [90, 95])
 
-    if not workers_data:
-        return None
-
-    worker_count = len(workers_data)
-    sum_latency = sum(w['latency'] for w in workers_data)
-    sum_runtime = sum(w['runtime'] for w in workers_data)
-    sum_tasks = sum(w['tasks'] for w in workers_data)
-    sum_voluntary = sum(w['voluntary'] for w in workers_data)
-    sum_nonvoluntary = sum(w['nonvoluntary'] for w in workers_data)
-    sum_avg_cpu_load = sum(w['avg_cpu_load'] for w in workers_data)
-    sum_avg_memory_mb = sum(w['avg_memory_mb'] for w in workers_data)
-
-    return {
-        'avg_latency': sum_latency / worker_count,
-        'avg_runtime': sum_runtime / worker_count,
-        'avg_tasks_per_worker': sum_tasks / worker_count,
-        'avg_voluntary': sum_voluntary / worker_count,
-        'avg_nonvoluntary': sum_nonvoluntary / worker_count,
-        'avg_cpu_load': sum_avg_cpu_load / worker_count,
-        'avg_memory_mb': sum_avg_memory_mb / worker_count,
-        'avg_worker_proc': worker_count / 15,
-        'worker_count': worker_count
+    result = {
+        'throughput': throughput,
+        'tasks': tasks,
+        'duration': duration,
+        'mean_latency': mean_lat,
+        'median_latency': median_lat,
+        'p90_latency': perc_lat[90],
+        'p95_latency': perc_lat[95],
+        'mean_runtime': mean_rt,
+        'median_runtime': median_rt,
+        'p90_runtime': perc_rt[90],
+        'p95_runtime': perc_rt[95],
+        'num_processes': num_processes,
     }
+    return result, latencies
 
 
-def collect_for_combination(runs_root: Path) -> List[Dict]:
-    """
-    Обходит все поддиректории runs_root (например, 01_first, 02_second...),
-    собирает для каждой данные из queue_throughput.log и summary.log.
-    Возвращает список результатов для каждого прогона.
-    """
+def collect_for_combination(runs_root: Path) -> Tuple[List[Dict], List[float]]:
+    """Собирает список результатов по всем прогонам в папке runs_root и все латентности."""
     results = []
-    # Сортируем для воспроизводимости порядка (по имени папки)
+    all_latencies = []
     for run_dir in sorted(runs_root.iterdir()):
         if not run_dir.is_dir():
             continue
-        queue_file = run_dir / 'queue_throughput.log'
-        summary_file = run_dir / 'summary.log'
-        if not (queue_file.exists() and summary_file.exists()):
-            print(f"  Пропускаем {run_dir.name}: отсутствуют необходимые файлы")
-            continue
-
-        # Данные из queue_throughput
-        throughput, tasks_completed, duration = parse_queue_throughput(queue_file)
-
-        # Данные из summary
-        summary_stats = parse_summary(summary_file)
-        if summary_stats is None:
-            print(f"  Пропускаем {run_dir.name}: нет рабочих процессов в summary.log")
-            continue
-
-        results.append({
-            'throughput': throughput,
-            'tasks_completed': tasks_completed,
-            'duration': duration,
-            'avg_latency': summary_stats['avg_latency'],
-            'avg_runtime': summary_stats['avg_runtime'],
-            'avg_tasks_per_worker': summary_stats['avg_tasks_per_worker'],
-            'avg_voluntary': summary_stats['avg_voluntary'],
-            'avg_nonvoluntary': summary_stats['avg_nonvoluntary'],
-            'avg_cpu_load': summary_stats['avg_cpu_load'],
-            'avg_memory_mb': summary_stats['avg_memory_mb'],
-            'worker_count': summary_stats['worker_count']
-        })
-    return results
+        res, lats = analyze_run(run_dir)
+        if res:
+            results.append(res)
+            all_latencies.extend(lats)
+    return results, all_latencies
 
 
-def average_results(results: List[Dict]) -> Optional[Dict]:
-    """Усредняет показатели по списку прогонов."""
+def compute_stats_over_runs(results: List[Dict]) -> Dict:
+    """
+    По списку результатов прогонов вычисляет статистики:
+        n, avg_duration, avg_tasks, avg_throughput,
+        mean_latency (среднее средних), sd_latency, cv_latency (в %),
+        ci_lower, ci_upper, avg_num_processes.
+    """
     if not results:
-        return None
+        return {}
     n = len(results)
-    avg = {}
-    for key in results[0].keys():
-        avg[key] = sum(r[key] for r in results) / n
-    avg['runs_count'] = n
-    return avg
+    lat_means = [r['mean_latency'] for r in results]
+    mean_of_means = statistics.mean(lat_means)
+
+    if n > 1:
+        stdev = statistics.stdev(lat_means)
+        cv = (stdev / mean_of_means) * 100.0 if mean_of_means != 0 else 0.0
+        sem = stdev / math.sqrt(n)
+        t_crit = t_critical(n, 0.95)
+        if math.isnan(t_crit):
+            ci_lower = ci_upper = float('nan')
+        else:
+            ci_half = t_crit * sem
+            ci_lower = mean_of_means - ci_half
+            ci_upper = mean_of_means + ci_half
+    else:
+        stdev = 0.0
+        cv = 0.0
+        ci_lower = ci_upper = float('nan')
+
+    avg_num_processes = statistics.mean(r['num_processes'] for r in results)
+
+    return {
+        'n': n,
+        'avg_duration': statistics.mean(r['duration'] for r in results),
+        'avg_tasks': round(statistics.mean(r['tasks'] for r in results), 1),
+        'avg_throughput': statistics.mean(r['throughput'] for r in results),
+        'mean_latency': mean_of_means,
+        'sd_latency': stdev,
+        'cv_latency': cv,
+        'ci_lower': ci_lower,
+        'ci_upper': ci_upper,
+        'avg_num_processes': avg_num_processes,
+    }
 
 
 def __get_default_root():
@@ -241,78 +232,89 @@ def __get_default_root():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Сбор статистики тестов Celery')
-    parser.add_argument('--root', default=__get_default_root(),
-                        help='Корневая директория с папками *._processes (по умолчанию текущая)')
-    parser.add_argument('--output', default=f'{__get_default_root()}/summary_report.txt',
-                        help='Файл для сохранения отчёта (по умолчанию summary_report.txt)')
+    parser = argparse.ArgumentParser(description='Финальный сбор статистики Celery')
+    parser.add_argument('--root', default=__get_default_root(), help='Корневая директория')
+    parser.add_argument('--output', default=f'{__get_default_root()}/final_stats.md', help='Выходной файл в формате Markdown')
     args = parser.parse_args()
 
     root_path = Path(args.root).resolve()
     if not root_path.is_dir():
-        print(f"Ошибка: директория {root_path} не существует")
+        print(f"Ошибка: {root_path} не существует")
         return
 
-    # Ищем папки вида 02_processes, 04_processes и т.д.
-    processes_dirs = sorted(root_path.glob('[0-9][0-9]_processes'))
-    if not processes_dirs:
-        print(f"Не найдено папок вида XX_processes в {root_path}")
-        return
+    lines = ["# Итоговая статистика тестов Celery (по сырым логам задач)",
+             "",
+             "## Накопительная нагрузка (cumulative)",
+             ""]
+    header = ("| Процессов (зад.) | Режим | Прогонов | Ср. процессов | Длительность (с) | Задач | Throughput (з/с) | "
+              "Сред. latency (с) | CV latency | 95% ДИ для среднего | Медиана (с)* | 90-й перц. (с)* | 95-й перц. (с)* | Прим. |")
+    sep = "|-----------------|-------|----------|---------------|------------------|-------|------------------|-------------------|------------|----------------------|--------------|-----------------|-----------------|-------|"
+    lines.append(header)
+    lines.append(sep)
 
-    # Сбор всех результатов по комбинациям
-    report_lines = ["Сводная статистика тестов Celery", "=" * 60]
-
-    for proc_dir in processes_dirs:
-        # Извлекаем число процессов из имени папки (первые две цифры)
-        proc_num = proc_dir.name[:2]
-        # Проверяем наличие подпапок autoscale и concurrency
-        for pool_type in ['autoscale', 'concurrency']:
-            pool_dir = proc_dir / pool_type
-            if not pool_dir.is_dir():
-                continue
-            for queue_type in ['cumulative', 'monotonic']:
-                queue_dir = pool_dir / queue_type
-                if not queue_dir.is_dir():
+    for queue_type in ['cumulative', 'schedule']:
+        if queue_type == 'schedule':
+            lines.append("")
+            lines.append("## Равномерная нагрузка по расписанию (schedule)")
+            lines.append("")
+            lines.append(header)
+            lines.append(sep)
+        queue_dir = root_path / queue_type
+        if not queue_dir.is_dir():
+            continue
+        processes_dirs = sorted(queue_dir.glob('[0-9][0-9]_processes'))
+        for proc_dir in processes_dirs:
+            proc_num = proc_dir.name[:2]
+            for pool_type in ['autoscale', 'concurrency']:
+                pool_dir = proc_dir / pool_type
+                if not pool_dir.is_dir():
                     continue
-
-                print(f"Обработка: {proc_num} процессов, {pool_type}, {queue_type}")
-                results = collect_for_combination(queue_dir)
-                avg = average_results(results)
-                if avg is None:
-                    print(f"  Нет данных для этой комбинации")
+                results, all_lat = collect_for_combination(pool_dir)
+                if not results:
                     continue
+                stats = compute_stats_over_runs(results)
+                n = stats['n']
+                avg_num_proc = stats['avg_num_processes']
+                dur = stats['avg_duration']
+                tasks = stats['avg_tasks']
+                thr = stats['avg_throughput']
+                mean_lat = stats['mean_latency']
+                cv = stats['cv_latency']
+                ci_low = stats['ci_lower']
+                ci_high = stats['ci_upper']
 
-                # Формируем строки отчёта
-                header = f"{proc_num} рабочих процессов {pool_type} {queue_type}"
-                report_lines.append("")
-                report_lines.append(header)
-                report_lines.append("-" * len(header))
-                report_lines.append(f"Количество прогонов: {avg['runs_count']}")
-                report_lines.append(f"Средняя длительность прогона: {avg['duration']:.2f}")
-                report_lines.append(f"Среднее кол-во задач в прогоне: {avg['tasks_completed']:.2f}")
-                report_lines.append("-" * len(header))
-                report_lines.append(f"Среднее кол-во процессов: {avg['worker_count']:.2f}")
-                report_lines.append(f"Среднее число выполненных задач на процесс: {avg['avg_tasks_per_worker']:.2f}")
-                report_lines.append(f"Пропускная способность (средний throughput_tps): {avg['throughput']:.2f}")
-                report_lines.append(f"Средний latency: {avg['avg_latency']:.4f}")
-                report_lines.append(f"Средний runtime: {avg['avg_runtime']:.4f}")
-                report_lines.append("-" * len(header))
-                report_lines.append(f"Среднее использование ЦПУ: {avg['avg_cpu_load']:.2f}")
-                report_lines.append(f"Среднее использование РАМ: {avg['avg_memory_mb']:.2f}")
-                report_lines.append(f"Среднее voluntary_ctxt_switches: {avg['avg_voluntary']:.2f}")
-                report_lines.append(f"Среднее nonvoluntary_ctxt_switches: {avg['avg_nonvoluntary']:.2f}")
+                if all_lat:
+                    median_all = statistics.median(all_lat)
+                    perc_all = percentiles(all_lat, [90, 95])
+                    p90 = perc_all[90]
+                    p95 = perc_all[95]
+                else:
+                    median_all = p90 = p95 = 0.0
 
-    # Вывод отчёта
-    report_text = "\n".join(report_lines)
-    print("\n" + report_text)
+                # Флаги предупреждений
+                flags = []
+                if cv > 30:
+                    flags.append("⚠️")
+                # Аномалия только если разница относительная > 5% и абсолютная > 0.1 секунды
+                if stats['sd_latency'] > 0 and abs(mean_lat - median_all) > max(0.05 * mean_lat, 0.1):
+                    flags.append("🔴")
+                flag_str = " ".join(flags) if flags else ""
 
-    # Сохранение в файл
-    output_file = Path(args.output)
-    try:
-        output_file.write_text(report_text, encoding='utf-8')
-        print(f"\nОтчёт сохранён в {output_file}")
-    except OSError as e:
-        print(f"Ошибка при сохранении файла: {e}")
+                ci_str = f"[{ci_low:.2f} – {ci_high:.2f}]" if not math.isnan(ci_low) else "N/A"
+                row = (f"| {proc_num} | {pool_type} | {n} | {avg_num_proc:.2f} | {dur:.2f} | {tasks:.1f} | {thr:.2f} | "
+                       f"{mean_lat:.2f} | {cv:.1f}% | {ci_str} | {median_all:.2f} | {p90:.2f} | {p95:.2f} | {flag_str} |")
+                lines.append(row)
+
+    lines.append("")
+    lines.append("> * — общие перцентили по всем задачам всех прогонов. ")
+    lines.append("> ⚠️ — коэффициент вариации (CV) > 30%.")
+    lines.append("")
+
+    output_text = "\n".join(lines)
+    print(output_text)
+    output_path = Path(args.output)
+    output_path.write_text(output_text, encoding='utf-8')
+    print(f"\nОтчёт сохранён в {output_path}")
 
 
 if __name__ == '__main__':
