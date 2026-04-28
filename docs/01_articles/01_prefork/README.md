@@ -279,3 +279,5 @@ timeline
 1. https://deepwiki.com/celery/celery/5.6-autoscaling#scaling-decision-flowchart
 2. https://github.com/celery/celery/issues/8943
 3. https://deepwiki.com/celery/billiard/2.2-worker-process-lifecycle#the-work-loop
+
+Исходный код эксперимента: https://github.com/okolobackend/Celery-Architecture-and-Scaling
