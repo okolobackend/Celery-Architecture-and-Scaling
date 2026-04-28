@@ -80,7 +80,7 @@ async def main_script(file_path: str, max_proc: str, queue_type: str) -> None:
     await asyncio.sleep(0.5)
 
     print(f'Start at {datetime.now()}')
-    time_sleep = 10 if 'schedule' in file_path else 1.6
+    time_sleep = 5 if 'schedule' in file_path else 1.6
 
     max_duration = 300
     start_time = time.time()

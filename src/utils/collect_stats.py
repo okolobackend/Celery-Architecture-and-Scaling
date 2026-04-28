@@ -14,10 +14,11 @@
 import argparse
 import json
 import math
-import os
 import statistics
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
+
+from tools.manipulate_path_dir import get_default_root
 
 
 def t_critical(n: int, conf: float = 0.95) -> float:
@@ -225,22 +226,62 @@ def compute_stats_over_runs(results: List[Dict]) -> Dict:
     }
 
 
-def __get_default_root():
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(script_dir))  # дважды подняться
-    return os.path.join(project_root, 'docs', '02_runtime')
-
-
 def main():
-    parser = argparse.ArgumentParser(description='Финальный сбор статистики Celery')
-    parser.add_argument('--root', default=__get_default_root(), help='Корневая директория')
-    parser.add_argument('--output', default=f'{__get_default_root()}/final_stats.md', help='Выходной файл в формате Markdown')
+    parser = argparse.ArgumentParser(description='Сбор статистики тестов Celery')
+    parser.add_argument('--root', default=get_default_root(),
+                        help='Корневая директория, содержащая папки-таймстампы (по умолчанию docs/02_runtime)')
+    parser.add_argument('--output', default=f'{get_default_root()}/summary_report.txt',
+                        help='Файл для сохранения отчёта')
+    parser.add_argument('--non-interactive', action='store_true',
+                        help='Неинтерактивный режим: при наличии нескольких таймстампов берётся последний')
     args = parser.parse_args()
 
     root_path = Path(args.root).resolve()
     if not root_path.is_dir():
-        print(f"Ошибка: {root_path} не существует")
+        print(f"Ошибка: директория {root_path} не существует")
         return
+
+    # --- НАЧАЛО БЛОКА ВЫБОРА ТАЙМСТАМПА ---
+    # Собираем все поддиректории в root_path (игнорируем скрытые и файлы)
+    timestamps = [d for d in root_path.iterdir() if d.is_dir() and not d.name.startswith('.')]
+    timestamps.sort()  # сортировка по имени даёт хронологический порядок
+
+    if not timestamps:
+        print(f"Ошибка: в {root_path} не найдено ни одной папки-таймстампа")
+        return
+
+    if len(timestamps) == 1:
+        selected = timestamps[0]
+        print(f"Найден один таймстамп: {selected.name}. Использую его.")
+    else:
+        if args.non_interactive:
+            selected = timestamps[-1]  # последний (самый новый, т.к. сортировка лексикографическая)
+            print(f"Неинтерактивный режим. Выбран последний таймстамп: {selected.name}")
+        else:
+            print("Найдены следующие таймстампы:")
+            for i, ts in enumerate(timestamps, start=1):
+                # Можно добавить дополнительную информацию, например количество вложенных элементов
+                print(f"{i}. {ts.name}")
+            while True:
+                try:
+                    choice = input("Введите номер таймстампа для анализа: ").strip()
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(timestamps):
+                        selected = timestamps[idx]
+                        break
+                    else:
+                        print(f"Номер должен быть от 1 до {len(timestamps)}")
+                except ValueError:
+                    print("Пожалуйста, введите число")
+
+    # Теперь root_path указывает на выбранную папку с таймстампом
+    root_path = selected
+    print(f"Рабочая директория: {root_path}")
+    # --- КОНЕЦ БЛОКА ВЫБОРА ---
+
+    # Далее идёт ваша существующая логика сбора статистики, использующая root_path
+    report_lines = ["Сводная статистика тестов Celery", "=" * 60]
+    # ... остальной код
 
     lines = ["# Итоговая статистика тестов Celery (по сырым логам задач)",
              "",
