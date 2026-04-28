@@ -1,0 +1,165 @@
+ 
+ -------------- celery@golubev-BMH-WCX9 v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- Linux-6.8.0-110-generic-x86_64-with-glibc2.39 2026-04-26 10:30:33
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         __main__:0x7984ec241a00
+- ** ---------- .> transport:   amqp://celery_demo:**@localhost:5672//
+- ** ---------- .> results:     disabled://
+- *** --- * --- .> concurrency: {min=1, max=2} (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . cpu_intensive
+  . memory_intensive
+
+[2026-04-26 10:30:33,109: INFO/MainProcess] Connected to amqp://celery_demo:**@127.0.0.1:5672//
+[2026-04-26 10:30:33,113: INFO/MainProcess] mingle: searching for neighbors
+[2026-04-26 10:30:34,130: INFO/MainProcess] mingle: all alone
+[2026-04-26 10:30:34,146: INFO/MainProcess] celery@golubev-BMH-WCX9 ready.
+[2026-04-26 10:30:34,146: INFO/MainProcess] Task cpu_intensive[37f1f1d0-febb-48e3-a232-e4ac387bdf04] received
+[2026-04-26 10:30:34,147: INFO/MainProcess] Task cpu_intensive[07560107-fb71-46ee-9c85-ea4e734dd4f7] received
+[2026-04-26 10:30:34,147: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:30:35,860: INFO/ForkPoolWorker-2] Task cpu_intensive[07560107-fb71-46ee-9c85-ea4e734dd4f7] succeeded in 1.5877786100027151s: 333333283333335000000
+[2026-04-26 10:30:35,895: INFO/ForkPoolWorker-1] Task cpu_intensive[37f1f1d0-febb-48e3-a232-e4ac387bdf04] succeeded in 1.6231908539994038s: 333333283333335000000
+[2026-04-26 10:30:44,018: INFO/MainProcess] Task memory_intensive[8b1e7670-7686-4809-8484-8783b3c6609c] received
+[2026-04-26 10:30:44,019: INFO/MainProcess] Task cpu_intensive[355584dc-d635-4a38-b667-53b96544f80a] received
+[2026-04-26 10:30:45,627: INFO/ForkPoolWorker-2] Task cpu_intensive[355584dc-d635-4a38-b667-53b96544f80a] succeeded in 1.6069584319993737s: 333333283333335000000
+[2026-04-26 10:30:45,751: INFO/ForkPoolWorker-1] Task memory_intensive[8b1e7670-7686-4809-8484-8783b3c6609c] succeeded in 1.731529976001184s: 'Memory wave: released'
+[2026-04-26 10:30:54,021: INFO/MainProcess] Task cpu_intensive[8cb6b95f-d389-4163-98ed-009585dda869] received
+[2026-04-26 10:30:54,022: INFO/MainProcess] Task memory_intensive[b787312f-6df2-4760-a826-6be2b12e9b5a] received
+[2026-04-26 10:30:55,663: INFO/ForkPoolWorker-1] Task cpu_intensive[8cb6b95f-d389-4163-98ed-009585dda869] succeeded in 1.6410544620011933s: 333333283333335000000
+[2026-04-26 10:30:55,746: INFO/ForkPoolWorker-2] Task memory_intensive[b787312f-6df2-4760-a826-6be2b12e9b5a] succeeded in 1.723389758997655s: 'Memory wave: released'
+[2026-04-26 10:31:04,024: INFO/MainProcess] Task cpu_intensive[446a9111-e84c-44fa-adf1-72e948b32120] received
+[2026-04-26 10:31:04,024: INFO/MainProcess] Task cpu_intensive[359d0b81-d0a3-4ec2-8b6f-5d3f6f9f3467] received
+[2026-04-26 10:31:05,633: INFO/ForkPoolWorker-2] Task cpu_intensive[359d0b81-d0a3-4ec2-8b6f-5d3f6f9f3467] succeeded in 1.608199809998041s: 333333283333335000000
+[2026-04-26 10:31:05,672: INFO/ForkPoolWorker-1] Task cpu_intensive[446a9111-e84c-44fa-adf1-72e948b32120] succeeded in 1.647321116994135s: 333333283333335000000
+[2026-04-26 10:31:14,027: INFO/MainProcess] Task memory_intensive[b14f4af8-faf4-42a5-86c9-a711b2570e7d] received
+[2026-04-26 10:31:14,028: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:31:14,028: INFO/MainProcess] Task cpu_intensive[85fd16e8-dda5-47d2-bba3-9844dabb3f76] received
+[2026-04-26 10:31:14,028: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:31:15,654: INFO/ForkPoolWorker-2] Task cpu_intensive[85fd16e8-dda5-47d2-bba3-9844dabb3f76] succeeded in 1.624692869001592s: 333333283333335000000
+[2026-04-26 10:31:15,806: INFO/ForkPoolWorker-3] Task memory_intensive[b14f4af8-faf4-42a5-86c9-a711b2570e7d] succeeded in 1.7281332010024926s: 'Memory wave: released'
+[2026-04-26 10:31:24,029: INFO/MainProcess] Task cpu_intensive[dcce73d8-8e6f-40f0-874a-09408d5ea7db] received
+[2026-04-26 10:31:24,030: INFO/MainProcess] Task memory_intensive[4dff1a0b-b428-40ab-b9b0-e391ab36a13c] received
+[2026-04-26 10:31:25,637: INFO/ForkPoolWorker-3] Task cpu_intensive[dcce73d8-8e6f-40f0-874a-09408d5ea7db] succeeded in 1.606054290998145s: 333333283333335000000
+[2026-04-26 10:31:25,701: INFO/ForkPoolWorker-2] Task memory_intensive[4dff1a0b-b428-40ab-b9b0-e391ab36a13c] succeeded in 1.6709494149981765s: 'Memory wave: released'
+[2026-04-26 10:31:34,032: INFO/MainProcess] Task cpu_intensive[2dc39585-e83c-46af-ad35-74c9eacafb6e] received
+[2026-04-26 10:31:34,033: INFO/MainProcess] Task cpu_intensive[5a9e178b-e956-45b4-982f-bcfa7c2b28a2] received
+[2026-04-26 10:31:35,677: INFO/ForkPoolWorker-3] Task cpu_intensive[2dc39585-e83c-46af-ad35-74c9eacafb6e] succeeded in 1.6428714439971372s: 333333283333335000000
+[2026-04-26 10:31:35,683: INFO/ForkPoolWorker-2] Task cpu_intensive[5a9e178b-e956-45b4-982f-bcfa7c2b28a2] succeeded in 1.6492136329979985s: 333333283333335000000
+[2026-04-26 10:31:44,036: INFO/MainProcess] Task memory_intensive[f652d3e4-3c72-437f-89cf-9841df28a714] received
+[2026-04-26 10:31:44,036: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:31:44,036: INFO/MainProcess] Task cpu_intensive[c64c93e6-bfc8-4c51-8e84-a55ca8092c41] received
+[2026-04-26 10:31:44,037: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:31:45,677: INFO/ForkPoolWorker-4] Task cpu_intensive[c64c93e6-bfc8-4c51-8e84-a55ca8092c41] succeeded in 1.5908349029996316s: 333333283333335000000
+[2026-04-26 10:31:45,717: INFO/ForkPoolWorker-3] Task memory_intensive[f652d3e4-3c72-437f-89cf-9841df28a714] succeeded in 1.6793645479992847s: 'Memory wave: released'
+[2026-04-26 10:31:54,039: INFO/MainProcess] Task cpu_intensive[60d8ff70-5edd-407c-af9c-b3a02692c320] received
+[2026-04-26 10:31:54,040: INFO/MainProcess] Task memory_intensive[1eb2574a-56d2-4c52-a066-484e396002dd] received
+[2026-04-26 10:31:55,676: INFO/ForkPoolWorker-3] Task cpu_intensive[60d8ff70-5edd-407c-af9c-b3a02692c320] succeeded in 1.635430196998641s: 333333283333335000000
+[2026-04-26 10:31:55,768: INFO/ForkPoolWorker-4] Task memory_intensive[1eb2574a-56d2-4c52-a066-484e396002dd] succeeded in 1.7264146030065604s: 'Memory wave: released'
+[2026-04-26 10:32:04,042: INFO/MainProcess] Task cpu_intensive[7097a189-95c6-4d52-81a1-ad24a0c662c4] received
+[2026-04-26 10:32:04,043: INFO/MainProcess] Task cpu_intensive[a3ede3f1-72df-454e-829e-a6e72417127f] received
+[2026-04-26 10:32:05,652: INFO/ForkPoolWorker-3] Task cpu_intensive[7097a189-95c6-4d52-81a1-ad24a0c662c4] succeeded in 1.6083741020047455s: 333333283333335000000
+[2026-04-26 10:32:05,660: INFO/ForkPoolWorker-4] Task cpu_intensive[a3ede3f1-72df-454e-829e-a6e72417127f] succeeded in 1.6159539709988167s: 333333283333335000000
+[2026-04-26 10:32:14,046: INFO/MainProcess] Task memory_intensive[eafd1b25-3d9c-422e-9cfa-f6eff7d7efae] received
+[2026-04-26 10:32:14,046: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:32:14,047: INFO/MainProcess] Task cpu_intensive[10c32148-8e36-4316-a1db-cce308efbde3] received
+[2026-04-26 10:32:14,047: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:32:15,696: INFO/ForkPoolWorker-4] Task cpu_intensive[10c32148-8e36-4316-a1db-cce308efbde3] succeeded in 1.648772304004524s: 333333283333335000000
+[2026-04-26 10:32:15,827: INFO/ForkPoolWorker-5] Task memory_intensive[eafd1b25-3d9c-422e-9cfa-f6eff7d7efae] succeeded in 1.732052670995472s: 'Memory wave: released'
+[2026-04-26 10:32:24,049: INFO/MainProcess] Task cpu_intensive[377d22a4-12cb-4e11-b44f-575cc521f136] received
+[2026-04-26 10:32:24,050: INFO/MainProcess] Task memory_intensive[1c06a9c6-43a5-410c-bc81-86eb1fcb35d3] received
+[2026-04-26 10:32:25,704: INFO/ForkPoolWorker-5] Task cpu_intensive[377d22a4-12cb-4e11-b44f-575cc521f136] succeeded in 1.653564660999109s: 333333283333335000000
+[2026-04-26 10:32:25,724: INFO/ForkPoolWorker-4] Task memory_intensive[1c06a9c6-43a5-410c-bc81-86eb1fcb35d3] succeeded in 1.6734216789991478s: 'Memory wave: released'
+[2026-04-26 10:32:34,050: INFO/MainProcess] Task cpu_intensive[3604c0d2-dbee-4cb8-85cc-375994cf4551] received
+[2026-04-26 10:32:34,051: INFO/MainProcess] Task cpu_intensive[7396d971-333a-435a-8372-234f1f3c6e84] received
+[2026-04-26 10:32:35,691: INFO/ForkPoolWorker-5] Task cpu_intensive[3604c0d2-dbee-4cb8-85cc-375994cf4551] succeeded in 1.6394218019995606s: 333333283333335000000
+[2026-04-26 10:32:35,694: INFO/ForkPoolWorker-4] Task cpu_intensive[7396d971-333a-435a-8372-234f1f3c6e84] succeeded in 1.6420650559957721s: 333333283333335000000
+[2026-04-26 10:32:44,053: INFO/MainProcess] Task memory_intensive[72a9bac6-9e72-4d40-ad71-4191189dab6c] received
+[2026-04-26 10:32:44,054: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:32:44,054: INFO/MainProcess] Task cpu_intensive[43e559b5-7051-4577-99e0-2c5d9d6108f9] received
+[2026-04-26 10:32:44,054: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:32:45,694: INFO/ForkPoolWorker-6] Task cpu_intensive[43e559b5-7051-4577-99e0-2c5d9d6108f9] succeeded in 1.5902385800000047s: 333333283333335000000
+[2026-04-26 10:32:45,732: INFO/ForkPoolWorker-5] Task memory_intensive[72a9bac6-9e72-4d40-ad71-4191189dab6c] succeeded in 1.6772003570004017s: 'Memory wave: released'
+[2026-04-26 10:32:54,057: INFO/MainProcess] Task cpu_intensive[d0c31513-e19a-4a3c-aef4-88938651a16c] received
+[2026-04-26 10:32:54,057: INFO/MainProcess] Task memory_intensive[5a21f824-0ede-403d-9fd1-6f480b2fe5e8] received
+[2026-04-26 10:32:55,695: INFO/ForkPoolWorker-5] Task cpu_intensive[d0c31513-e19a-4a3c-aef4-88938651a16c] succeeded in 1.6371534270001575s: 333333283333335000000
+[2026-04-26 10:32:55,780: INFO/ForkPoolWorker-6] Task memory_intensive[5a21f824-0ede-403d-9fd1-6f480b2fe5e8] succeeded in 1.7221929660008755s: 'Memory wave: released'
+[2026-04-26 10:33:04,059: INFO/MainProcess] Task cpu_intensive[1a48a8ad-ee7e-4d4f-8797-b818e6651f3e] received
+[2026-04-26 10:33:04,060: INFO/MainProcess] Task cpu_intensive[88c3fd53-6e0c-4964-8866-2522fc31d323] received
+[2026-04-26 10:33:05,664: INFO/ForkPoolWorker-5] Task cpu_intensive[1a48a8ad-ee7e-4d4f-8797-b818e6651f3e] succeeded in 1.603286660007143s: 333333283333335000000
+[2026-04-26 10:33:05,668: INFO/ForkPoolWorker-6] Task cpu_intensive[88c3fd53-6e0c-4964-8866-2522fc31d323] succeeded in 1.607316001005529s: 333333283333335000000
+[2026-04-26 10:33:14,062: INFO/MainProcess] Task memory_intensive[4fdec66b-6bfe-46eb-91c7-e711153c98f2] received
+[2026-04-26 10:33:14,062: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:33:14,063: INFO/MainProcess] Task cpu_intensive[d96dce15-c5ac-4e75-8a38-0e4fe1eb925b] received
+[2026-04-26 10:33:14,063: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:33:15,709: INFO/ForkPoolWorker-6] Task cpu_intensive[d96dce15-c5ac-4e75-8a38-0e4fe1eb925b] succeeded in 1.645191841002088s: 333333283333335000000
+[2026-04-26 10:33:15,845: INFO/ForkPoolWorker-7] Task memory_intensive[4fdec66b-6bfe-46eb-91c7-e711153c98f2] succeeded in 1.7322277200000826s: 'Memory wave: released'
+[2026-04-26 10:33:24,065: INFO/MainProcess] Task cpu_intensive[05b277d8-497d-4e10-8175-c44dcb9e9b5b] received
+[2026-04-26 10:33:24,066: INFO/MainProcess] Task memory_intensive[d8271315-f796-4c75-867a-bb494cb2825e] received
+[2026-04-26 10:33:25,703: INFO/ForkPoolWorker-7] Task cpu_intensive[05b277d8-497d-4e10-8175-c44dcb9e9b5b] succeeded in 1.6366436130047077s: 333333283333335000000
+[2026-04-26 10:33:25,737: INFO/ForkPoolWorker-6] Task memory_intensive[d8271315-f796-4c75-867a-bb494cb2825e] succeeded in 1.6705932379991282s: 'Memory wave: released'
+[2026-04-26 10:33:34,068: INFO/MainProcess] Task cpu_intensive[080d2f0e-0b1a-454a-b349-7a20d700d140] received
+[2026-04-26 10:33:34,069: INFO/MainProcess] Task cpu_intensive[fc0d7808-e0cd-4d63-b21d-3d53516cd108] received
+[2026-04-26 10:33:35,713: INFO/ForkPoolWorker-7] Task cpu_intensive[080d2f0e-0b1a-454a-b349-7a20d700d140] succeeded in 1.643697763000091s: 333333283333335000000
+[2026-04-26 10:33:35,714: INFO/ForkPoolWorker-6] Task cpu_intensive[fc0d7808-e0cd-4d63-b21d-3d53516cd108] succeeded in 1.6443582970023272s: 333333283333335000000
+[2026-04-26 10:33:44,072: INFO/MainProcess] Task memory_intensive[e0f11aba-ba71-491d-a15d-407c5a93a8b6] received
+[2026-04-26 10:33:44,073: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:33:44,073: INFO/MainProcess] Task cpu_intensive[9917b8b2-3a9b-4390-aa6e-aecdae2e7982] received
+[2026-04-26 10:33:44,073: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:33:45,712: INFO/ForkPoolWorker-8] Task cpu_intensive[9917b8b2-3a9b-4390-aa6e-aecdae2e7982] succeeded in 1.5899231989969849s: 333333283333335000000
+[2026-04-26 10:33:45,752: INFO/ForkPoolWorker-7] Task memory_intensive[e0f11aba-ba71-491d-a15d-407c5a93a8b6] succeeded in 1.6778136979992269s: 'Memory wave: released'
+[2026-04-26 10:33:54,075: INFO/MainProcess] Task cpu_intensive[e49cf492-060d-4463-a303-3cc3d1164294] received
+[2026-04-26 10:33:54,076: INFO/MainProcess] Task memory_intensive[425bfe61-410f-4265-9f37-5b2c8d69cb46] received
+[2026-04-26 10:33:55,728: INFO/ForkPoolWorker-7] Task cpu_intensive[e49cf492-060d-4463-a303-3cc3d1164294] succeeded in 1.651586229003442s: 333333283333335000000
+[2026-04-26 10:33:55,797: INFO/ForkPoolWorker-8] Task memory_intensive[425bfe61-410f-4265-9f37-5b2c8d69cb46] succeeded in 1.7199545860057697s: 'Memory wave: released'
+[2026-04-26 10:34:04,078: INFO/MainProcess] Task cpu_intensive[05a8e1c7-1b49-4db1-b1f9-3a663c94d512] received
+[2026-04-26 10:34:04,079: INFO/MainProcess] Task cpu_intensive[708d1905-9ee2-45a6-8ad0-417d4c3add09] received
+[2026-04-26 10:34:05,692: INFO/ForkPoolWorker-7] Task cpu_intensive[05a8e1c7-1b49-4db1-b1f9-3a663c94d512] succeeded in 1.6123901369937812s: 333333283333335000000
+[2026-04-26 10:34:05,692: INFO/ForkPoolWorker-8] Task cpu_intensive[708d1905-9ee2-45a6-8ad0-417d4c3add09] succeeded in 1.6125417570001446s: 333333283333335000000
+[2026-04-26 10:34:14,081: INFO/MainProcess] Task memory_intensive[4ee03fe7-674d-4571-af73-541e6a790dc0] received
+[2026-04-26 10:34:14,081: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:34:14,082: INFO/MainProcess] Task cpu_intensive[166a2a04-7b54-4592-a35f-11255a0e39ec] received
+[2026-04-26 10:34:14,082: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:34:15,753: INFO/ForkPoolWorker-8] Task cpu_intensive[166a2a04-7b54-4592-a35f-11255a0e39ec] succeeded in 1.6699952619965188s: 333333283333335000000
+[2026-04-26 10:34:15,863: INFO/ForkPoolWorker-9] Task memory_intensive[4ee03fe7-674d-4571-af73-541e6a790dc0] succeeded in 1.7328554449995863s: 'Memory wave: released'
+[2026-04-26 10:34:24,083: INFO/MainProcess] Task cpu_intensive[a106640f-40cd-420e-945f-7c0b428fca17] received
+[2026-04-26 10:34:24,084: INFO/MainProcess] Task memory_intensive[f0bbd00c-319d-4e26-a637-9e1552398e70] received
+[2026-04-26 10:34:25,694: INFO/ForkPoolWorker-9] Task cpu_intensive[a106640f-40cd-420e-945f-7c0b428fca17] succeeded in 1.6085807609997573s: 333333283333335000000
+[2026-04-26 10:34:25,758: INFO/ForkPoolWorker-8] Task memory_intensive[f0bbd00c-319d-4e26-a637-9e1552398e70] succeeded in 1.6733566900002188s: 'Memory wave: released'
+[2026-04-26 10:34:34,086: INFO/MainProcess] Task cpu_intensive[84516155-caf9-4abd-8806-5ac22842ab4a] received
+[2026-04-26 10:34:34,087: INFO/MainProcess] Task cpu_intensive[73ddde16-73cd-4cb8-b0bc-11dfdf3bdd26] received
+[2026-04-26 10:34:35,713: INFO/ForkPoolWorker-8] Task cpu_intensive[73ddde16-73cd-4cb8-b0bc-11dfdf3bdd26] succeeded in 1.6256418819975806s: 333333283333335000000
+[2026-04-26 10:34:35,720: INFO/ForkPoolWorker-9] Task cpu_intensive[84516155-caf9-4abd-8806-5ac22842ab4a] succeeded in 1.6325358680041973s: 333333283333335000000
+[2026-04-26 10:34:44,089: INFO/MainProcess] Task memory_intensive[66dcf8a5-6dc0-40d7-91ea-c5186c3c21e8] received
+[2026-04-26 10:34:44,089: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:34:44,090: INFO/MainProcess] Task cpu_intensive[cfebcccf-b14c-485b-b479-b0c27f235051] received
+[2026-04-26 10:34:44,090: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:34:45,732: INFO/ForkPoolWorker-10] Task cpu_intensive[cfebcccf-b14c-485b-b479-b0c27f235051] succeeded in 1.5920860969999922s: 333333283333335000000
+[2026-04-26 10:34:45,768: INFO/ForkPoolWorker-9] Task memory_intensive[66dcf8a5-6dc0-40d7-91ea-c5186c3c21e8] succeeded in 1.6778637040042668s: 'Memory wave: released'
+[2026-04-26 10:34:54,093: INFO/MainProcess] Task cpu_intensive[3a684bf1-3d82-4727-a8d1-6297fce78597] received
+[2026-04-26 10:34:54,094: INFO/MainProcess] Task memory_intensive[85328267-0a4a-4860-bcfd-5343625c2fbd] received
+[2026-04-26 10:34:55,782: INFO/ForkPoolWorker-9] Task cpu_intensive[3a684bf1-3d82-4727-a8d1-6297fce78597] succeeded in 1.687485469999956s: 333333283333335000000
+[2026-04-26 10:34:55,817: INFO/ForkPoolWorker-10] Task memory_intensive[85328267-0a4a-4860-bcfd-5343625c2fbd] succeeded in 1.722870422003325s: 'Memory wave: released'
+[2026-04-26 10:35:04,096: INFO/MainProcess] Task cpu_intensive[8eb0f1e7-52a5-4535-b157-2db85fff140e] received
+[2026-04-26 10:35:04,096: INFO/MainProcess] Task cpu_intensive[a998587a-2126-4668-a3ff-b31bed5afad6] received
+[2026-04-26 10:35:05,707: INFO/ForkPoolWorker-10] Task cpu_intensive[a998587a-2126-4668-a3ff-b31bed5afad6] succeeded in 1.610016730002826s: 333333283333335000000
+[2026-04-26 10:35:05,723: INFO/ForkPoolWorker-9] Task cpu_intensive[8eb0f1e7-52a5-4535-b157-2db85fff140e] succeeded in 1.6266068380064098s: 333333283333335000000
+[2026-04-26 10:35:14,099: INFO/MainProcess] Task memory_intensive[ec7df13e-fe16-425f-912e-e4d9bcedc266] received
+[2026-04-26 10:35:14,100: INFO/MainProcess] Scaling down 1 processes.
+[2026-04-26 10:35:14,100: INFO/MainProcess] Task cpu_intensive[36b0f156-cdf8-4e0b-a648-d94943b33ea7] received
+[2026-04-26 10:35:14,100: INFO/MainProcess] Scaling up 1 processes.
+[2026-04-26 10:35:15,746: INFO/ForkPoolWorker-10] Task cpu_intensive[36b0f156-cdf8-4e0b-a648-d94943b33ea7] succeeded in 1.645117599000514s: 333333283333335000000
+[2026-04-26 10:35:15,885: INFO/ForkPoolWorker-11] Task memory_intensive[ec7df13e-fe16-425f-912e-e4d9bcedc266] succeeded in 1.735431861001416s: 'Memory wave: released'
+[2026-04-26 10:35:24,102: INFO/MainProcess] Task cpu_intensive[b628db91-943c-4cc6-a643-c4f1f919ac56] received
+[2026-04-26 10:35:24,103: INFO/MainProcess] Task memory_intensive[9748dfa9-754c-4fea-9cef-ec07d36fefb7] received
+[2026-04-26 10:35:25,712: INFO/ForkPoolWorker-11] Task cpu_intensive[b628db91-943c-4cc6-a643-c4f1f919ac56] succeeded in 1.60842053599481s: 333333283333335000000
+[2026-04-26 10:35:25,773: INFO/ForkPoolWorker-10] Task memory_intensive[9748dfa9-754c-4fea-9cef-ec07d36fefb7] succeeded in 1.6693396990012843s: 'Memory wave: released'
+
+worker: Warm shutdown (MainProcess)
