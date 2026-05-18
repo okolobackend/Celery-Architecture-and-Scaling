@@ -117,7 +117,7 @@ start_worker() {
             exit 1
         }
         exec "$@"
-    ' _ "$cg_name" "$CELERY_EXE" -A "$CELERY_APP" worker --loglevel=INFO "$prefork_arg" > "$worker_log" 2>&1 &
+    ' _ "$cg_name" "$CELERY_EXE" -A "$CELERY_APP" worker --loglevel=INFO $prefork_arg > "$worker_log" 2>&1 &
     WORKER_PID=$!
 
     sleep 0.5
@@ -166,6 +166,14 @@ run_one_iteration() {
     if [[ "$wt" == "a" ]]; then
         local min_proc=$((proc_num / 2))
         prefork_arg="--autoscale=$proc_num,$min_proc"
+    elif [[ "$wt" == "e" ]]; then
+        prefork_arg="--concurrency=$proc_num --pool=eventlet"
+        CELERY_POOL="eventlet"
+        export CELERY_POOL
+    elif [[ "$wt" == "g" ]]; then
+        prefork_arg="--concurrency=$proc_num --pool=gevent"
+        CELERY_POOL="gevent"
+        export CELERY_POOL
     else
         prefork_arg="--concurrency=$proc_num"
     fi
@@ -214,7 +222,7 @@ done
 sudo -v
 
 # -------------------- Генерация всех заданий (комбинация + номер итерации) --------------------
-WORKER_TYPES=("a" "c")
+WORKER_TYPES=("e" "g")  # ("a" "c") - для зеленых потоков, для всех объединить
 QUEUE_TYPES=("v" "s")
 PROC_COUNTS=(2 4 8)
 

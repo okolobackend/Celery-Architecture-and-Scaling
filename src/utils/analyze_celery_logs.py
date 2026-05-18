@@ -4,9 +4,11 @@ import glob
 import csv
 from collections import defaultdict
 
+from utils.args import QUEUE_TYPE, WORKER_TYPE
+
 
 def parse_filename(filename):
-    pattern = r'worker_celery_(exp_\d+)_([ac])_([sv])_(\d+)_iter\d+_\d+\.log'
+    pattern = r'worker_celery_(exp_\d+)_([aceg])_([sv])_(\d+)_iter\d+_\d+\.log'
     match = re.match(pattern, os.path.basename(filename))
     if not match:
         return None
@@ -46,7 +48,7 @@ def percentile(sorted_data, p):
     return sorted_data[lower] * (1 - weight) + sorted_data[upper] * weight
 
 
-def main(directory='/home/experimenter/projects/celery-autoscale/worker_logs_new', output_csv='stats_summary.csv'):
+def main(directory='/home/experimenter/projects/celery-autoscale/src/run_scripts/worker_logs', output_csv='stats_summary_runtime.csv'):
     log_files = glob.glob(os.path.join(directory, '*.log'))
     if not log_files:
         print(f"Нет файлов .log в {directory}")
@@ -78,8 +80,8 @@ def main(directory='/home/experimenter/projects/celery-autoscale/worker_logs_new
         workers_str = f"{max_workers},{data['min_workers']}" if launch_type == 'a' else str(max_workers)
         results.append({
             'exp_id': exp_id,
-            'режим': 'autoscale' if launch_type == 'a' else 'concurrency',
-            'очередь': 'scheduled' if queue_type == 's' else 'cumulative',
+            'режим': WORKER_TYPE.get(launch_type, 'N/A'),
+            'очередь': QUEUE_TYPE.get(queue_type, 'N/A'),
             'воркеры': workers_str,
             'медиана (50)': round(med, 4),
             '95-й перцентиль': round(p95, 4),

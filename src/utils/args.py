@@ -2,12 +2,14 @@ import argparse
 from typing import Sequence
 
 
-type_worker = {
+WORKER_TYPE = {
     'a': 'autoscale',
-    'c': 'concurrency'
+    'c': 'concurrency',
+    'g': 'gevent',
+    'e': 'eventlet'
 }
 
-type_queue = {
+QUEUE_TYPE = {
     'v': 'cumulative',
     's': 'schedule'
 
@@ -46,8 +48,8 @@ def parse_args():
         description="Скрипт для тестов Celery",
         epilog="Пример: python script.py a v 1 4"
     )
-    parser.add_argument('worker_type', choices=['a', 'c'],
-                        help="Тип воркера: 'a' - autoscale, 'c' - concurrency")
+    parser.add_argument('worker_type', choices=['a', 'c', 'e', 'g'],
+                        help="Тип воркера: 'a' - autoscale, 'c' - concurrency, 'e' - eventlet, 'g' - gevent")
     parser.add_argument('max_proc', type=int, choices=[2, 4, 8],
                         help="Максимум процессов: 2, 4 или 8")
     parser.add_argument('queue_type', choices=['v', 's'],
@@ -62,11 +64,11 @@ def validate_and_rename_args(args) -> Sequence[str]:
     """
     Проверяем аргументы и переименовываем их в наименования директорий
     """
-    if args.worker_type not in type_worker.keys():
-        raise ArgsException("Нет такого режима для prefork!")
+    if args.worker_type not in WORKER_TYPE.keys():
+        raise ArgsException("Нет такого режима для воркера!")
     if args.order not in order_name.keys():
         raise ArgsException("Нет такого порядкового номера!")
-    if args.queue_type not in type_queue.keys():
+    if args.queue_type not in QUEUE_TYPE.keys():
         raise ArgsException("Нет такого режима создания задач!")
 
-    return f"{args.max_proc:02d}", type_worker[args.worker_type], type_queue[args.queue_type], order_name[args.order]
+    return f"{args.max_proc:02d}", WORKER_TYPE[args.worker_type], QUEUE_TYPE[args.queue_type], order_name[args.order]

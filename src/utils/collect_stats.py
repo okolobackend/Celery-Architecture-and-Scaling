@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
 from tools.manipulate_path_dir import get_default_root
+from utils.args import QUEUE_TYPE, WORKER_TYPE
 
 
 def t_critical(n: int, conf: float = 0.95) -> float:
@@ -230,7 +231,7 @@ def main():
     parser = argparse.ArgumentParser(description='Сбор статистики тестов Celery')
     parser.add_argument('--root', default=get_default_root(),
                         help='Корневая директория, содержащая папки-таймстампы (по умолчанию docs/02_runtime)')
-    parser.add_argument('--output', default=f'{get_default_root()}/summary_report.txt',
+    parser.add_argument('--output', default=f'{get_default_root()}/final_stats.md',
                         help='Файл для сохранения отчёта')
     parser.add_argument('--non-interactive', action='store_true',
                         help='Неинтерактивный режим: при наличии нескольких таймстампов берётся последний')
@@ -293,7 +294,7 @@ def main():
     lines.append(header)
     lines.append(sep)
 
-    for queue_type in ['cumulative', 'schedule']:
+    for queue_type in QUEUE_TYPE.values():
         if queue_type == 'schedule':
             lines.append("")
             lines.append("## Равномерная нагрузка по расписанию (schedule)")
@@ -306,7 +307,7 @@ def main():
         processes_dirs = sorted(queue_dir.glob('[0-9][0-9]_processes'))
         for proc_dir in processes_dirs:
             proc_num = proc_dir.name[:2]
-            for pool_type in ['autoscale', 'concurrency']:
+            for pool_type in WORKER_TYPE.values():
                 pool_dir = proc_dir / pool_type
                 if not pool_dir.is_dir():
                     continue

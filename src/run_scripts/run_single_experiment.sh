@@ -135,7 +135,7 @@ if [[ $# -eq 3 ]]; then
     MAX_PROC="$3"
 else
     echo "Введите параметры эксперимента:"
-    echo "Тип worker'а (a=autoscale, c=concurrency):"
+    echo "Тип worker'а (a=autoscale, c=concurrency, e=eventlet, g=gevent):"
     read -r WORKER_TYPE
     echo "Тип очереди (v=накопительная, s=по расписанию(раз в 10 сек):"
     read -r QUEUE_TYPE
@@ -143,7 +143,7 @@ else
     read -r MAX_PROC
 fi
 
-if [[ ! "$WORKER_TYPE" =~ ^[ac]$ ]]; then
+if [[ ! "$WORKER_TYPE" =~ ^[aceg]$ ]]; then
     error_exit "Неверный тип worker'а. Допустимо: a, c"
 fi
 if [[ ! "$QUEUE_TYPE" =~ ^[vs]$ ]]; then
@@ -157,6 +157,14 @@ MAX_PROC_NUM=$((10#$MAX_PROC))
 if [[ "$WORKER_TYPE" == "a" ]]; then
     MIN_PROC=$((MAX_PROC_NUM / 2))
     PREFORK_ARG="--autoscale=$MAX_PROC_NUM,$MIN_PROC"
+elif [[ "$WORKER_TYPE" == "e" ]]; then
+    PREFORK_ARG="-P eventlet --concurrency=$MAX_PROC_NUM"
+    CELERY_POOL="eventlet"
+    export CELERY_POOL
+elif [[ "$WORKER_TYPE" == "g" ]]; then
+    PREFORK_ARG="-P gevent --concurrency=$MAX_PROC_NUM"
+    CELERY_POOL="gevent"
+    export CELERY_POOL
 else
     PREFORK_ARG="--concurrency=$MAX_PROC_NUM"
 fi

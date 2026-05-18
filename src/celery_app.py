@@ -1,3 +1,17 @@
+import os
+
+
+# В скрипт не забыть добавить переменную окружения CELERY_POOL.
+# Конечно, так лучше не делать и лучше использовать один более современный гевент.
+# Рассмотреть создание новых задач. Возможно, под большой бенчмарк
+if os.environ.get('CELERY_POOL') == 'gevent':
+    from gevent import monkey; monkey.patch_all()
+elif os.environ.get('CELERY_POOL') == 'eventlet':
+    # Если внутри кода воркера `eventlet` по какой-то причине что-то пошло не так,
+    # патч можно уточнить, например, временно отключив патчинг модуля `thread`.
+    #    eventlet.monkey_patch(thread=False)
+    import eventlet; eventlet.monkey_patch()
+
 from celery import Celery
 
 

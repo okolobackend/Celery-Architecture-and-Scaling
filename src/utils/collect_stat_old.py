@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
 from tools.manipulate_path_dir import get_default_root
+from utils.args import QUEUE_TYPE, WORKER_TYPE
 from utils.collect_stats import t_critical
 
 
@@ -279,11 +280,12 @@ def aggregate_results(results_list: List[Dict]) -> Dict:
 
 
 def main():
+    default_root = '/home/experimenter/projects/celery-autoscale/docs/02_runtime/2026-04-26_01-02-40'
     parser = argparse.ArgumentParser(description='Сбор статистики тестов Celery')
-    parser.add_argument('--root', default=get_default_root(),
+    parser.add_argument('--root', default=default_root,
                         help='Корневая директория с папками *._processes (по умолчанию текущая)')
-    parser.add_argument('--output', default=f'{get_default_root()}/summary_report.txt',
-                        help='Файл для сохранения отчёта (по умолчанию summary_report.txt)')
+    parser.add_argument('--output', default=f'{default_root}/old_summary_report.txt',
+                        help='Файл для сохранения отчёта (по умолчанию old_summary_report.txt)')
     args = parser.parse_args()
 
     root_path = Path(args.root).resolve()
@@ -294,7 +296,7 @@ def main():
     # Сбор всех результатов по комбинациям
     report_lines = ["Сводная статистика тестов Celery", "=" * 60]
 
-    for queue_type in ['cumulative', 'schedule']:
+    for queue_type in QUEUE_TYPE.values():
         queue_dir = root_path / queue_type
         if not queue_dir.is_dir():
             continue
@@ -309,7 +311,7 @@ def main():
             # Извлекаем число процессов из имени папки (первые две цифры)
             proc_num = proc_dir.name[:2]
             # Проверяем наличие подпапок autoscale и concurrency
-            for pool_type in ['autoscale', 'concurrency']:
+            for pool_type in WORKER_TYPE.values():
                 pool_dir = proc_dir / pool_type
                 if not pool_dir.is_dir():
                     continue
